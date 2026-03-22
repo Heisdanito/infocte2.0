@@ -25,7 +25,7 @@ if ($conn->connect_error) {
     ]);
     exit; // stop execution
 }ele{
-        echo 'connected'
+        echo 'connected';
     }
 
 
