@@ -24,7 +24,7 @@ if ($conn->connect_error) {
         "message" => "Database connection failed: " . $conn->connect_error
     ]);
     exit; // stop execution
-}ele{
+}else{
         echo 'connected';
     }
 
