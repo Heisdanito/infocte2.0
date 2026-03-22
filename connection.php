@@ -1,7 +1,7 @@
 <?php
 $db_name = "if0_41221533_heis_infotess";
-$db_psw  = "sql302.infinityfree.com";
-$db_host = "localhost";
+$db_psw  = "02omExnoeMFQQQX";
+$db_host = "sql302.infinityfree.com";
 $db_user = "if0_41221533";
 $conn;
 try{
