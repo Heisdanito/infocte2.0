@@ -6,10 +6,10 @@ $db_name = "defaultdb";
 $port    = 21225;
 
 try {
-    $conn = new mysqli($db_host, $db_user, $db_psw, $db_name, $port);
-
-    // Aiven requires SSL
-    $conn->ssl_set(NULL, NULL, '/app/ca.pem', NULL, NULL);
+    // SSL must be configured BEFORE connecting
+    $conn = new mysqli();
+    $conn->ssl_set(NULL, NULL, __DIR__ . '/ca.pem', NULL, NULL);
+    $conn->real_connect($db_host, $db_user, $db_psw, $db_name, $port, NULL, MYSQLI_CLIENT_SSL);
 
     if ($conn->connect_error) {
         echo json_encode([
