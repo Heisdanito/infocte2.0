@@ -4,10 +4,17 @@ COPY . /var/www/html/
 
 RUN docker-php-ext-install mysqli
 
-# Fix MPM conflict - disable event, enable prefork
-RUN a2dismod mpm_event && a2enmod mpm_prefork
+# Force remove conflicting MPM modules, keep only prefork
+RUN rm -f /etc/apache2/mods-enabled/mpm_event.conf \
+          /etc/apache2/mods-enabled/mpm_event.load \
+          /etc/apache2/mods-enabled/mpm_worker.conf \
+          /etc/apache2/mods-enabled/mpm_worker.load && \
+    ln -sf /etc/apache2/mods-available/mpm_prefork.conf \
+           /etc/apache2/mods-enabled/mpm_prefork.conf && \
+    ln -sf /etc/apache2/mods-available/mpm_prefork.load \
+           /etc/apache2/mods-enabled/mpm_prefork.load
 
-# Make Apache listen on Railway's dynamic $PORT
+# Railway dynamic port
 RUN sed -i 's/Listen 80/Listen ${PORT}/' /etc/apache2/ports.conf && \
     sed -i 's/:80>/:${PORT}>/' /etc/apache2/sites-enabled/000-default.conf
 
