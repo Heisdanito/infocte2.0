@@ -1,0 +1,29 @@
+[phases.build]
+cmds = []
+
+[start]
+cmd = "php -S 0.0.0.0:$PORT"
+```
+
+---
+
+## Steps
+
+1. Go to your `infocte2.0` GitHub repo
+2. Click **"Add file"** → **"Create new file"**
+3. Name it `nixpacks.toml`
+4. Paste the content above
+5. Commit it
+6. Railway will auto-redeploy
+
+---
+
+## Also make sure your repo structure looks like this:
+```
+/
+├── nixpacks.toml
+├── save-att.php
+├── auth-server.php
+├── near.php
+├── profile-stats.php
+└── ... (other PHP files)
