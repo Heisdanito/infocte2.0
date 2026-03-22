@@ -1,8 +1,8 @@
 <?php
-$db_name = "infoctess";
-$db_psw  = "";
+$db_name = "if0_41221533_heis_infotess";
+$db_psw  = "sql302.infinityfree.com";
 $db_host = "localhost";
-$db_user = "root";
+$db_user = "if0_41221533";
 $conn;
 try{
     $conn = new mysqli($db_host, $db_user, $db_psw, $db_name);
