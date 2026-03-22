@@ -11,7 +11,7 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") { http_response_code(200); exit();
 
 header("Content-Type: application/json");
 session_start();
-require_once './connection.php'; // adjust path
+require_once __DIR__ . '/connection.php'; // adjust path
 
 // Only allow POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
