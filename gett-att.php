@@ -6,7 +6,7 @@ header("Access-Control-Allow-Headers: Content-Type");
 
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") { http_response_code(200); exit(); }
 
-require_once './connection.php'; // adjust path
+require_once 'connection.php'; // adjust path
 
 $input      = json_decode(file_get_contents("php://input"), true);
 $student_id = $input["student_id"]    ?? null; //5262140032;
