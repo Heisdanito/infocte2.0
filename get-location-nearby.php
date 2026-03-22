@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once './connection.php'; // adjust path
+require_once __DIR__ . '/connection.php';
 
 // ── Read JSON body ─────────────────────────────────────────────────────────────
 $rawData = file_get_contents("php://input");
