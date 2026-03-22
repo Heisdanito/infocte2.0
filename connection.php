@@ -1,9 +1,9 @@
 <?php
-$db_name = "if0_41221533_heis_infotess";
-$db_psw  = "02omExnoeMFQQQX";
-$db_host = "sql302.infinityfree.com";
-$db_user = "if0_41221533";
-$port = 3306;
+$db_name = "defaultdb";
+$db_psw  = "<redacted>";
+$db_host = "mysql-291ab10a-heisdanito-7ee7.b.aivencloud.com";
+$db_user = "avnadmin";
+$port = 21225;
 $conn;
 try{
     $conn = new mysqli($db_host, $db_user, $db_psw, $db_name);
