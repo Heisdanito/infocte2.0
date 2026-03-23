@@ -8,8 +8,29 @@ ini_set('log_errors', 1);
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
 
-require_once __DIR__ . '/connection.php';
+// ── Inline connection ──────────────────────────────────────────────────────
+$db_host = "mysql-291ab10a-heisdanito-7ee7.b.aivencloud.com";
+$db_user = "avnadmin";
+$db_psw  = "AVNS_ZFYiFvpqdF-G5jN0vXu";
+$db_name = "defaultdb";
+$port    = 21225;
+$ca_path = __DIR__ . '/ca.pem';
 
+if (!file_exists($ca_path)) {
+    echo json_encode(["status" => "error", "message" => "ca.pem not found at: $ca_path"]);
+    exit;
+}
+try {
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+    $conn = new mysqli();
+    $conn->ssl_set(NULL, NULL, $ca_path, NULL, NULL);
+    $conn->real_connect($db_host, $db_user, $db_psw, $db_name, $port, NULL, MYSQLI_CLIENT_SSL);
+} catch (Exception $e) {
+    echo json_encode(["status" => "error", "message" => "DB connect failed: " . $e->getMessage()]);
+    exit;
+}
+
+// ── Read input ─────────────────────────────────────────────────────────────
 $data = json_decode(file_get_contents("php://input"), true);
 
 if (!$data) {
@@ -32,6 +53,7 @@ $qrcode     = mysqli_real_escape_string($conn, $qrcode);
 $latitude   = mysqli_real_escape_string($conn, $latitude);
 $longitude  = mysqli_real_escape_string($conn, $longitude);
 
+// ── Get student info ───────────────────────────────────────────────────────
 $sql = mysqli_query($conn, "SELECT group_id, programme FROM students WHERE student_id = '$student_id' AND active = '1'");
 if (!$sql || mysqli_num_rows($sql) === 0) {
     echo json_encode(["status" => "failed", "message" => "Student not found or inactive"]);
@@ -41,12 +63,14 @@ $student          = mysqli_fetch_assoc($sql);
 $student_group_id = $student['group_id'];
 $student_prog     = $student['programme'];
 
-$sql_group = mysqli_query($conn, "SELECT group_id FROM groups WHERE group_id = '$student_group_id' AND programme_id = '$student_prog'");
+// ── Validate group — backticks fix for MySQL 8 reserved word ──────────────
+$sql_group = mysqli_query($conn, "SELECT group_id FROM `groups` WHERE group_id = '$student_group_id' AND programme_id = '$student_prog'");
 if (!$sql_group || mysqli_num_rows($sql_group) === 0) {
     echo json_encode(["status" => "failed", "message" => "Group and programme mismatch"]);
     exit;
 }
 
+// ── Get active QR session ─────────────────────────────────────────────────
 $sql_qr = mysqli_query($conn, "SELECT * FROM qrcode WHERE group_id = '$student_group_id' AND is_active = '1' AND (session_code = '$qrcode' OR qrcode = '$qrcode')");
 if (!$sql_qr || mysqli_num_rows($sql_qr) === 0) {
     echo json_encode(["status" => "failed", "message" => "No active session found for your group or session has expired"]);
@@ -58,33 +82,38 @@ $session_code = $qr['session_code'];
 $qr_lat       = floatval($qr['latitude']);
 $qr_lon       = floatval($qr['longitude']);
 
+// ── Haversine distance check ───────────────────────────────────────────────
 function haversine($lat1, $lon1, $lat2, $lon2) {
     $R    = 6371000;
     $dLat = deg2rad(floatval($lat2) - floatval($lat1));
     $dLon = deg2rad(floatval($lon2) - floatval($lon1));
-    $a    = sin($dLat/2) * sin($dLat/2) + cos(deg2rad(floatval($lat1))) * cos(deg2rad(floatval($lat2))) * sin($dLon/2) * sin($dLon/2);
+    $a    = sin($dLat/2) * sin($dLat/2)
+          + cos(deg2rad(floatval($lat1))) * cos(deg2rad(floatval($lat2)))
+          * sin($dLon/2) * sin($dLon/2);
     return $R * 2 * atan2(sqrt($a), sqrt(1 - $a));
 }
 
 $distance = haversine(floatval($latitude), floatval($longitude), $qr_lat, $qr_lon);
 
 if ($distance > 500) {
-    echo json_encode(["status" => "failed", "message" => "You are too far from the class location.", "distance_meters" => round($distance, 2), "allowed_meters" => 500]);
+    echo json_encode([
+        "status"          => "failed",
+        "message"         => "You are too far from the class location.",
+        "distance_meters" => round($distance, 2),
+        "allowed_meters"  => 500
+    ]);
     exit;
 }
 
-// Lock the row for this student + session to block any race condition or double tap
+// ── Insert attendance with transaction lock ────────────────────────────────
 $conn->begin_transaction();
 
 try {
-    // Re-check inside transaction with a row lock — prevents duplicate insert
-    // from two simultaneous requests hitting at the exact same millisecond
     $lock_check = $conn->query(
         "SELECT id FROM attendance
          WHERE student_id = '$student_id'
          AND session_code = '$session_code'
-         LIMIT 1
-         FOR UPDATE"
+         LIMIT 1 FOR UPDATE"
     );
 
     if ($lock_check && $lock_check->num_rows > 0) {
@@ -92,7 +121,12 @@ try {
         echo json_encode([
             "status"  => "success",
             "message" => "Attendance already recorded for this session",
-            "data"    => ["student_id" => $student_id, "session_code" => $session_code, "course_id" => $course_id, "distance_meters" => round($distance, 2)]
+            "data"    => [
+                "student_id"      => $student_id,
+                "session_code"    => $session_code,
+                "course_id"       => $course_id,
+                "distance_meters" => round($distance, 2)
+            ]
         ]);
         exit;
     }
@@ -122,7 +156,13 @@ try {
     echo json_encode([
         "status"  => "success",
         "message" => "Attendance recorded successfully",
-        "data"    => ["student_id" => $student_id, "group_id" => $student_group_id, "course_id" => $course_id, "session_code" => $session_code, "distance_meters" => round($distance, 2)]
+        "data"    => [
+            "student_id"      => $student_id,
+            "group_id"        => $student_group_id,
+            "course_id"       => $course_id,
+            "session_code"    => $session_code,
+            "distance_meters" => round($distance, 2)
+        ]
     ]);
 
 } catch (Exception $e) {
