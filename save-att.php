@@ -63,7 +63,7 @@ $student          = mysqli_fetch_assoc($sql);
 $student_group_id = $student['group_id'];
 $student_prog     = $student['programme'];
 
-// ── Validate group — backticks fix for MySQL 8 reserved word ──────────────
+// ── Validate group ─────────────────────────────────────────────────────────
 $sql_group = mysqli_query($conn, "SELECT group_id FROM `groups` WHERE group_id = '$student_group_id' AND programme_id = '$student_prog'");
 if (!$sql_group || mysqli_num_rows($sql_group) === 0) {
     echo json_encode(["status" => "failed", "message" => "Group and programme mismatch"]);
@@ -131,9 +131,14 @@ try {
         exit;
     }
 
+    // session_user_token added with empty string default
+    $session_user_token = "";
+    $serial             = "";
+
     $stmt = $conn->prepare(
-        "INSERT INTO attendance (student_id, group_id, course_id, session_code, qrcode, latitude, longitude, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())"
+        "INSERT INTO attendance 
+            (student_id, group_id, course_id, session_user_token, session_code, qrcode, serial, latitude, longitude, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
     );
 
     if (!$stmt) {
@@ -142,7 +147,18 @@ try {
         exit;
     }
 
-    $stmt->bind_param("sssssss", $student_id, $student_group_id, $course_id, $session_code, $qrcode, $latitude, $longitude);
+    $stmt->bind_param(
+        "sssssssss",
+        $student_id,
+        $student_group_id,
+        $course_id,
+        $session_user_token,
+        $session_code,
+        $qrcode,
+        $serial,
+        $latitude,
+        $longitude
+    );
 
     if (!$stmt->execute()) {
         $conn->rollback();
