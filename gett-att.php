@@ -67,7 +67,7 @@ if ($sql && mysqli_num_rows($sql) > 0) {
     while ($row = mysqli_fetch_assoc($sql)) {
         $course_id      = $row['course_id'];
         $attended       = (int) $row['attended_classes'];
-        $sql_total      = $conn->query("SELECT COUNT(*) as total_sessions FROM attendance WHERE course_id = '$course_id'");
+        $sql_total      = $conn->query("SELECT COUNT(*) as total_sessions FROM qrcode WHERE course_id = '$course_id'");
         $total_sessions = (int) mysqli_fetch_assoc($sql_total)['total_sessions'];
         $missed         = $total_sessions - $attended;
         $percentage     = $total_sessions > 0 ? round(($attended / $total_sessions) * 100, 2) : 0;
